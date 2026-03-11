@@ -1,0 +1,41 @@
+{
+  "name": "AI Setup Agent",
+  "version": "1.0",
+  "description": "Analyzes your project and configures mentiko for optimal agent performance. Detects stack, suggests chains, and generates starter workflows tailored to your codebase.",
+  "config": {
+    "cli": "claude",
+    "max_rounds": 3,
+    "on_complete": "report"
+  },
+  "metadata": {
+    "category": "automation",
+    "tags": ["setup", "onboarding", "infrastructure", "multi-agent"],
+    "builtin": true
+  },
+  "agents": [
+    {
+      "id": "project-analyzer",
+      "name": "Project Analyzer",
+      "role": "You are a project analysis expert. Your job is to thoroughly analyze the current workspace and produce a structured summary of the project.",
+      "prompt": "Analyze the project in the current workspace (working directory). Produce a JSON report covering:\n\n1. **languages**: primary languages detected (check file extensions: .ts/.js/.py/.go/.rs/.rb/.java)\n2. **frameworks**: detected frameworks (package.json, requirements.txt, Cargo.toml, go.mod, etc.)\n3. **package_manager**: npm/pnpm/yarn/pip/cargo/go\n4. **has_tests**: boolean (look for test/ tests/ __tests__/ *.test.* *.spec.*)\n5. **has_ci**: boolean (look for .github/workflows/ .gitlab-ci.yml etc.)\n6. **has_docker**: boolean (look for Dockerfile docker-compose.*)\n7. **is_monorepo**: boolean (multiple package.json or pyproject.toml etc.)\n8. **git_remote**: main git remote URL if available\n9. **description**: 1-2 sentence project description based on README or package.json\n10. **recommended_agents**: list of agent types that would be useful (code-reviewer, test-writer, doc-generator, security-scanner, etc.)\n\nOutput ONLY the JSON object, no prose. Start with { and end with }.",
+      "triggers": ["chain_start"],
+      "emits": "analysis_complete"
+    },
+    {
+      "id": "config-recommender",
+      "name": "Config Recommender",
+      "role": "You are a configuration expert for AI agent orchestration. Based on project analysis, you recommend optimal mentiko configuration.",
+      "prompt": "Based on the project analysis from the previous agent, produce configuration recommendations for mentiko.\n\nGenerate a JSON object with:\n\n1. **executor**: recommended CLI executor (\"cc\" for Claude Code, \"codex\" for OpenAI Codex, \"aider\" for Aider)\n2. **env_vars**: list of env vars the project likely needs [{\"name\": \"...\", \"description\": \"...\", \"example\": \"...\"}]\n3. **suggested_chains**: 3-5 chain ideas tailored to this project, each with:\n   - name: chain name\n   - description: what it does\n   - agents: array of agent roles\n   - use_case: when to run it\n4. **best_practices**: 3-5 actionable best practices for this specific project type\n5. **quick_start**: a single command or action the user should take first\n\nOutput ONLY the JSON object.",
+      "triggers": ["analysis_complete"],
+      "emits": "config_ready"
+    },
+    {
+      "id": "setup-generator",
+      "name": "Setup Generator",
+      "role": "You are a mentiko chain generator. You create production-ready chain definitions based on recommendations.",
+      "prompt": "Based on the project analysis and configuration recommendations, generate the top 2 most valuable chains for this project as mentiko chain JSON files.\n\nFor each chain, output a complete valid chain.json with:\n- name, version, description\n- config: { cli, max_rounds }\n- metadata: { category, tags }\n- agents[]: each with id, name, role, prompt, triggers, emits\n\nUse {TASK} as a placeholder in prompts where user input is needed.\nUse {GOAL} for the overall goal.\n\nThen write each chain as a file:\n- chains/[slugified-name]/chain.json\n\nAfter writing the files, output a summary report in markdown:\n\n# Mentiko Setup Complete\n\n## Project: [project name]\n[1-2 sentence description]\n\n## Generated Chains\n- **[chain name]**: [what it does]\n- **[chain name]**: [what it does]\n\n## Recommended Next Steps\n1. [step]\n2. [step]\n3. [step]\n\n## Environment Variables Needed\n[list any env vars detected]\n\nSave the report as: reports/setup-report.md",
+      "triggers": ["config_ready"],
+      "emits": "chain_complete"
+    }
+  ]
+}

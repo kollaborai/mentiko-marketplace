@@ -1,0 +1,26 @@
+{
+  "name": "Scheduled Demo Chain",
+  "version": "1.1",
+  "description": "Example chain with cron schedule - runs every hour",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 1,
+    "project_root": "auto",
+    "session_prefix": "sched",
+    "on_complete": "stop",
+    "schedule": "0 * * * *",
+    "timezone": "UTC"
+  },
+  "agents": [
+    {
+      "$ref": "status-reporter",
+      "triggers": ["manual-start"],
+      "emits": "report-done",
+      "context": {
+        "read_first": [],
+        "workspace": "workspace/status/"
+      }
+    }
+  ]
+}

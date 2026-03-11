@@ -1,0 +1,49 @@
+{
+  "name": "Research Write Review Loop",
+  "version": "2.1",
+  "description": "Three-agent chain with conditional branching based on review verdict",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 5,
+    "project_root": "auto",
+    "session_prefix": "rwr",
+    "on_complete": "stop"
+  },
+  "agents": [
+    {
+      "$ref": "researcher",
+      "triggers": ["manual-start"],
+      "emits": "research-complete",
+      "context": {
+        "read_first": [],
+        "workspace": "workspace/research/"
+      }
+    },
+    {
+      "$ref": "technical-writer",
+      "triggers": ["research-complete"],
+      "emits": "draft-complete",
+      "context": {
+        "read_first": ["workspace/research/findings.md"],
+        "workspace": "workspace/draft/"
+      }
+    },
+    {
+      "$ref": "content-reviewer",
+      "triggers": ["draft-complete"],
+      "emits": "review-approved",
+      "context": {
+        "read_first": [
+          "workspace/research/findings.md",
+          "workspace/draft/content.md"
+        ],
+        "workspace": "workspace/review/"
+      }
+    }
+  ],
+  "branches": {
+    "needs-revision-research": "researcher",
+    "needs-revision-draft": "technical-writer"
+  }
+}

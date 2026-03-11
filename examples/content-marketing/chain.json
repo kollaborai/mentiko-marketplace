@@ -1,0 +1,131 @@
+{
+  "name": "Content Marketing Pipeline",
+  "version": "1.0",
+  "description": "Blog post creation with research, write, edit, publish agents",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 3,
+    "project_root": "auto",
+    "session_prefix": "content",
+    "on_complete": "stop",
+    "content_config": {
+      "target_audience": "{TARGET_AUDIENCE}",
+      "tone": "{TONE}",
+      "word_count_target": "{WORD_COUNT}",
+      "seo_keywords": "{SEO_KEYWORDS}",
+      "publishing_platform": "{PLATFORM}"
+    }
+  },
+  "agents": [
+    {
+      "id": "research",
+      "name": "Content Researcher",
+      "role": "Research the topic and gather sources",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "research-complete",
+      "context": {
+        "read_first": [],
+        "workspace": "workspace/research/"
+      },
+      "prompt": "You are a Content Researcher. Your task is to: {TASK}.\n\n1. Research the topic thoroughly using web search\n2. Gather credible sources and statistics\n3. Identify key points and subtopics to cover\n4. Analyze competitor content for gaps\n5. Find relevant examples and case studies\n6. Research SEO keywords if provided: {seo_keywords}\n\nDeliver to workspace/research/ with:\n- brief.md (content brief with outline)\n- sources.md (list of sources with links)\n- keywords.md (SEO keyword analysis)\n- outline.md (detailed article outline)\n- target-audience-analysis.md (who we're writing for)\n\nBrief must include:\n- Working title\n- Target audience\n- Key messages\n- Content angle/unique perspective\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "search web",
+          "read sources",
+          "write to workspace/research/"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "write",
+      "name": "Content Writer",
+      "role": "Write the blog post based on research",
+      "triggers": [
+        "research-complete",
+        "needs-revision"
+      ],
+      "emits": "draft-complete",
+      "context": {
+        "read_first": [
+          "workspace/research/brief.md",
+          "workspace/research/outline.md"
+        ],
+        "workspace": "workspace/write/"
+      },
+      "prompt": "You are a Content Writer. Your task is to write a blog post.\n\n1. Read all research files in workspace/research/\n2. Follow the outline in brief.md\n3. Write for target audience: {target_audience}\n4. Use tone: {tone}\n5. Target word count: {word_count_target}\n6. Incorporate SEO keywords naturally\n7. Include headings, subheadings, and bullet points\n8. Add a compelling intro and conclusion\n9. Include call-to-action if appropriate\n\nDeliver to workspace/write/ with:\n- article.md (the complete blog post)\n- meta.md (title, description, tags for SEO)\n- word-count.md (actual word count and stats)\n\nArticle must be:\n- Well-structured with H1, H2, H3 headings\n- Engaging and readable\n- Factually accurate based on research\n- Ready for publication after editing\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read research",
+          "write content",
+          "create outlines"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "edit",
+      "name": "Content Editor",
+      "role": "Edit for grammar, flow, style, and SEO",
+      "triggers": [
+        "draft-complete"
+      ],
+      "emits": "editing-complete",
+      "context": {
+        "read_first": [
+          "workspace/research/brief.md",
+          "workspace/write/article.md"
+        ],
+        "workspace": "workspace/edit/"
+      },
+      "prompt": "You are a Content Editor. Your task is to edit the blog post.\n\nRead the brief and article, then:\n\n1. Grammar and spelling check\n2. Improve clarity and flow\n3. Verify tone matches: {tone}\n4. Check heading structure\n5. Validate facts against sources\n6. Optimize for SEO keywords\n7. Check word count against target: {word_count_target}\n8. Add internal/external link suggestions\n\nDeliver to workspace/edit/ with:\n- edited-article.md (the edited version)\n- edit-notes.md (changes made and suggestions)\n- seo-checklist.md (SEO optimization review)\n\nEnd with exactly one of:\nVERDICT: approved\nVERDICT: needs-revision\n\nIf approved, emit 'editing-complete'. If the article needs significant rework, emit 'needs-revision'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read all content",
+          "make edits",
+          "request rewrites"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "publish",
+      "name": "Content Publisher",
+      "role": "Format and prepare for publishing",
+      "triggers": [
+        "editing-complete"
+      ],
+      "emits": "content-published",
+      "context": {
+        "read_first": [
+          "workspace/edit/edited-article.md",
+          "workspace/write/meta.md"
+        ],
+        "workspace": "workspace/publish/"
+      },
+      "prompt": "You are a Content Publisher. Your task is to prepare content for {publishing_platform}.\n\n1. Read the edited article and metadata\n2. Format according to platform requirements\n3. Generate excerpt/summary\n4. Prepare featured image suggestions\n5. Create social media teasers\n6. Set up categories/tags\n7. Schedule publication date if applicable\n\nDeliver to workspace/publish/ with:\n- ready-to-publish.md (final formatted content)\n- excerpt.md (short summary for listings)\n- social-posts.md (twitter, linkedin, facebook posts)\n- image-prompts.md (prompts for featured image generation)\n- publication-checklist.md (pre-publish checklist)\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "format content",
+          "create metadata",
+          "write publication files"
+        ],
+        "needs_approval": [
+          "actually publishing to platform"
+        ]
+      }
+    }
+  ],
+  "branches": {
+    "needs-revision": "write"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Research, Write, Review",
+  "version": "1.0",
+  "description": "Classic content pipeline: research a topic, write an article, review and iterate",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 5,
+    "project_root": "auto",
+    "session_prefix": "rwr",
+    "on_complete": "stop"
+  },
+  "agents": [
+    {
+      "id": "researcher",
+      "name": "Researcher",
+      "role": "Gather information on the given topic",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "research-complete",
+      "context": {
+        "read_first": [],
+        "workspace": "workspace/research/"
+      },
+      "prompt": "You are a Researcher. Your task is to: {TASK}.\n\n1. Search for and gather relevant information\n2. Organize findings into clear themes\n3. Cite sources where applicable\n4. Write your findings to workspace/research/findings.md\n5. Include a summary of key points at the top\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "search the web",
+          "read documentation",
+          "write to workspace/research/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "writer",
+      "name": "Writer",
+      "role": "Create content based on research",
+      "triggers": [
+        "research-complete"
+      ],
+      "emits": "draft-complete",
+      "context": {
+        "read_first": [
+          "workspace/research/findings.md"
+        ],
+        "workspace": "workspace/draft/"
+      },
+      "prompt": "You are a Writer. Your task is to create content based on the research findings.\n\n1. Read workspace/research/findings.md thoroughly\n2. Create well-structured content covering all key points\n3. Use clear headings and organized sections\n4. Write your draft to workspace/draft/content.md\n5. Ensure accuracy based on the research\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read research files",
+          "write to workspace/draft/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "reviewer",
+      "name": "Reviewer",
+      "role": "Review content for quality, accuracy, completeness",
+      "triggers": [
+        "draft-complete"
+      ],
+      "emits": "review-approved",
+      "context": {
+        "read_first": [
+          "workspace/research/findings.md",
+          "workspace/draft/content.md"
+        ],
+        "workspace": "workspace/review/"
+      },
+      "prompt": "You are a Reviewer. Your task is to review the content for quality.\n\nRead both the research findings and the draft content. Check:\n1. Accuracy - does content match research?\n2. Completeness - are all key points covered?\n3. Clarity - is the writing clear and well-organized?\n4. Structure - do headings and sections make sense?\n\nWrite your review to workspace/review/feedback.md with:\n- Summary of findings\n- Specific issues if any\n- Overall assessment\n\nEnd with exactly one of:\nVERDICT: approved\nVERDICT: needs-revision-research\nVERDICT: needs-revision-draft\n\nIf approved, emit 'review-approved'.\nIf the research is lacking, emit 'needs-revision-research'.\nIf the draft needs work but research is good, emit 'needs-revision-draft'.",
+      "authorities": {
+        "can": [
+          "read all files",
+          "write to workspace/review/"
+        ],
+        "needs_approval": []
+      }
+    }
+  ],
+  "branches": {
+    "needs-revision-research": "researcher",
+    "needs-revision-draft": "writer"
+  }
+}

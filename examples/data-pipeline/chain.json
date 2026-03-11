@@ -1,0 +1,138 @@
+{
+  "name": "Data Pipeline ETL",
+  "version": "1.0",
+  "description": "ETL workflow with extract, transform, load, and verification agents",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 30,
+    "max_rounds": 1,
+    "project_root": "auto",
+    "session_prefix": "etl",
+    "on_complete": "stop",
+    "etl_config": {
+      "source_type": "{SOURCE_TYPE}",
+      "source_connection": "{SOURCE_CONN}",
+      "target_type": "{TARGET_TYPE}",
+      "target_connection": "{TARGET_CONN}",
+      "batch_size": 1000,
+      "retry_failed_records": true
+    }
+  },
+  "agents": [
+    {
+      "id": "extract",
+      "name": "Data Extractor",
+      "role": "Extract raw data from source system",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "extract-complete",
+      "context": {
+        "read_first": [
+          "specs/data-source.md"
+        ],
+        "workspace": "workspace/extract/"
+      },
+      "prompt": "You are a Data Extractor. Your task is to extract data from {SOURCE_TYPE}.\n\n1. Read specs/data-source.md for connection details\n2. Connect to the source system\n3. Extract data in batches of {batch_size}\n4. Handle connection errors and retries\n5. Log extraction statistics (rows read, errors, timing)\n6. Save raw data to workspace/extract/raw-data.jsonl\n7. Create extraction report in workspace/extract/extract-report.md\n\nOutput format:\n- raw-data.jsonl: one JSON object per line\n- extract-report.md: summary with row count, errors, duration\n\nIf extraction fails critically, emit 'extract-failed'. Otherwise emit 'extract-complete'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "connect to source",
+          "read data",
+          "write to workspace/extract/"
+        ],
+        "needs_approval": [
+          "modifying source data",
+          "large exports (>1M rows)"
+        ]
+      }
+    },
+    {
+      "id": "transform",
+      "name": "Data Transformer",
+      "role": "Transform and clean extracted data",
+      "triggers": [
+        "extract-complete"
+      ],
+      "emits": "transform-complete",
+      "context": {
+        "read_first": [
+          "specs/transformation-rules.md",
+          "workspace/extract/raw-data.jsonl"
+        ],
+        "workspace": "workspace/transform/"
+      },
+      "prompt": "You are a Data Transformer. Your task is to transform the extracted data.\n\n1. Read specs/transformation-rules.md for transformation logic\n2. Read workspace/extract/raw-data.jsonl\n3. Apply transformations:\n   - Type conversions\n   - Data cleaning (null handling, trimming)\n   - Validation against schema\n   - Business rule applications\n4. Track rejected records with reasons\n5. Save transformed data to workspace/transform/transformed-data.jsonl\n6. Save rejected records to workspace/transform/rejected-records.jsonl\n7. Create transformation report in workspace/transform/transform-report.md\n\nReport must include:\n- Input row count\n- Output row count\n- Rejection count and reasons\n- Transformation statistics\n\nIf more than 50% of records are rejected, emit 'transform-failed'. Otherwise emit 'transform-complete'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read extracted data",
+          "write transformations",
+          "reject records"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "load",
+      "name": "Data Loader",
+      "role": "Load transformed data to target system",
+      "triggers": [
+        "transform-complete"
+      ],
+      "emits": "load-complete",
+      "context": {
+        "read_first": [
+          "specs/target-schema.md",
+          "workspace/transform/transformed-data.jsonl"
+        ],
+        "workspace": "workspace/load/"
+      },
+      "prompt": "You are a Data Loader. Your task is to load data into {TARGET_TYPE}.\n\n1. Read specs/target-schema.md for target structure\n2. Read workspace/transform/transformed-data.jsonl\n3. Load data in batches of {batch_size}\n4. Use bulk insert operations for efficiency\n5. Handle constraint violations and duplicates\n6. Track successful and failed loads\n7. Create load report in workspace/load/load-report.md\n\nReport must include:\n- Rows attempted\n- Rows successfully loaded\n- Rows failed with error details\n- Timing statistics\n\nIf more than 10% of records fail to load, emit 'load-failed'. Otherwise emit 'load-complete'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "connect to target",
+          "write data",
+          "create tables if needed"
+        ],
+        "needs_approval": [
+          "modifying existing tables",
+          "deleting data"
+        ]
+      }
+    },
+    {
+      "id": "verify",
+      "name": "Data Verifier",
+      "role": "Verify data integrity after load",
+      "triggers": [
+        "load-complete"
+      ],
+      "emits": "pipeline-complete",
+      "context": {
+        "read_first": [
+          "specs/verification-criteria.md",
+          "workspace/load/load-report.md"
+        ],
+        "workspace": "workspace/verify/"
+      },
+      "prompt": "You are a Data Verifier. Your task is to verify the ETL pipeline succeeded.\n\n1. Read specs/verification-criteria.md for success criteria\n2. Read all workspace reports:\n   - workspace/extract/extract-report.md\n   - workspace/transform/transform-report.md\n   - workspace/load/load-report.md\n3. Verify data counts match across stages\n4. Run validation queries against target system\n5. Check data quality metrics\n6. Create verification report in workspace/verify/verification-report.md\n\nReport must include:\n- Row count reconciliation (source vs target)\n- Data quality checks passed/failed\n- Any anomalies detected\n- Overall pipeline health score\n\nEnd with exactly one of:\nVERDICT: verified\nVERDICT: failed-verification\n\nIf verified, emit 'pipeline-complete'. If failed, emit 'verification-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read target data",
+          "run validation queries",
+          "write reports"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    }
+  ],
+  "branches": {
+    "extract-failed": "extract",
+    "transform-failed": "transform",
+    "load-failed": "load",
+    "verification-failed": "verify"
+  }
+}

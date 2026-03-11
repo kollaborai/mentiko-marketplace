@@ -1,0 +1,136 @@
+{
+  "name": "Customer Onboarding Pipeline",
+  "version": "1.0",
+  "description": "New customer setup with welcome, provision, train, followup agents",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 1,
+    "project_root": "auto",
+    "session_prefix": "onboard",
+    "on_complete": "stop",
+    "customer_config": {
+      "customer_name": "{CUSTOMER_NAME}",
+      "contact_email": "{CONTACT_EMAIL}",
+      "contact_name": "{CONTACT_NAME}",
+      "tier": "{TIER}",
+      "plan": "{PLAN}",
+      "region": "{REGION}",
+      "company_size": "{COMPANY_SIZE}"
+    }
+  },
+  "agents": [
+    {
+      "id": "welcome",
+      "name": "Welcome Coordinator",
+      "role": "Send welcome email and prepare onboarding materials",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "welcome-sent",
+      "context": {
+        "read_first": [
+          "templates/welcome-email.md",
+          "templates/onboarding-checklist.md"
+        ],
+        "workspace": "workspace/welcome/"
+      },
+      "prompt": "You are a Welcome Coordinator. Onboard {customer_name} ({tier} tier).\n\n1. Read templates/welcome-email.md\n2. Personalize welcome email for {contact_name}\n3. Include tier-specific benefits and features\n4. Add onboarding timeline and next steps\n5. Prepare customer account summary\n6. Create onboarding checklist\n\nDeliver to workspace/welcome/ with:\n- welcome-email.md (personalized welcome email)\n- account-summary.md (customer details and plan)\n- onboarding-timeline.md (expected milestones)\n- checklist.md (tasks for onboarding)\n\nEmail should include:\n- Warm welcome message\n- Account credentials (placeholder for security)\n- Getting started guide link\n- Training schedule signup\n- Support contact info\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read templates",
+          "write emails",
+          "create checklists"
+        ],
+        "needs_approval": [
+          "actually sending emails"
+        ]
+      }
+    },
+    {
+      "id": "provision",
+      "name": "Provisioning Agent",
+      "role": "Provision customer accounts and resources",
+      "triggers": [
+        "welcome-sent"
+      ],
+      "emits": "provisioning-complete",
+      "context": {
+        "read_first": [
+          "specs/provisioning-rules.md",
+          "workspace/welcome/account-summary.md"
+        ],
+        "workspace": "workspace/provision/"
+      },
+      "prompt": "You are a Provisioning Agent. Provision resources for {customer_name}.\n\n1. Read specs/provisioning-rules.md for {tier} tier requirements\n2. Create user accounts for {contact_email} and additional users\n3. Provision database/ storage based on {plan}\n4. Configure region: {region}\n5. Set up billing and subscription\n6. Create API keys and access tokens\n7. Configure initial settings and preferences\n8. Apply any enterprise customizations if applicable\n\nDeliver to workspace/provision/ with:\n- provisioning-report.md (what was created)\n- accounts.md (user accounts with roles)\n- credentials.md (secure credential delivery instructions)\n- resources.md (databases, storage, etc)\n- api-keys.md (generated keys - keep secure)\n- configuration.md (initial app configuration)\n\nReport must include:\n- All resources created with IDs\n- Access URLs and endpoints\n- Default credentials\n- Resource limits and quotas\n\nIf provisioning fails critically, emit 'provisioning-failed'. Otherwise emit 'provisioning-complete'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "create accounts",
+          "provision resources",
+          "generate api keys"
+        ],
+        "needs_approval": [
+          "overages",
+          "upgrades beyond plan"
+        ]
+      }
+    },
+    {
+      "id": "train",
+      "name": "Training Coordinator",
+      "role": "Prepare and schedule training sessions",
+      "triggers": [
+        "provisioning-complete"
+      ],
+      "emits": "training-scheduled",
+      "context": {
+        "read_first": [
+          "templates/training-agenda.md",
+          "workspace/welcome/account-summary.md"
+        ],
+        "workspace": "workspace/train/"
+      },
+      "prompt": "You are a Training Coordinator. Prepare training for {customer_name}.\n\n1. Read templates/training-agenda.md\n2. Customize agenda based on {tier} tier and {company_size}\n3. Create role-specific training tracks (admin, user, viewer)\n4. Prepare training materials and documentation\n5. Schedule training sessions\n6. Create hands-on exercises\n7. Prepare FAQ and common questions\n\nDeliver to workspace/train/ with:\n- training-agenda.md (customized agenda)\n- training-schedule.md (dates and times)\n- materials.md (links to docs, videos, guides)\n- exercises.md (hands-on practice activities)\n- role-guides/ (separate guides for each role)\n- faq.md (common questions and answers)\n\nTraining should cover:\n- Platform overview and navigation\n- Key features for their tier\n- Daily workflow walkthrough\n- Best practices and tips\n- Troubleshooting common issues\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "create training materials",
+          "schedule sessions",
+          "write documentation"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "followup",
+      "name": "Follow-up Coordinator",
+      "role": "Schedule follow-up and create success plan",
+      "triggers": [
+        "training-scheduled"
+      ],
+      "emits": "onboarding-complete",
+      "context": {
+        "read_first": [
+          "templates/success-plan.md",
+          "workspace/provision/provisioning-report.md"
+        ],
+        "workspace": "workspace/followup/"
+      },
+      "prompt": "You are a Follow-up Coordinator. Create success plan for {customer_name}.\n\n1. Read templates/success-plan.md\n2. Review what was provisioned and trained\n3. Create 30-60-90 day success milestones\n4. Schedule check-in meetings\n5. Assign customer success manager\n6. Create success metrics and KPIs\n7. Set up ongoing communication cadence\n\nDeliver to workspace/followup/ with:\n- success-plan.md (30-60-90 day plan)\n- milestones.md (key milestones and dates)\n- checkins.md (scheduled meeting dates)\n- success-metrics.md (KPIs to track)\n- support-plan.md (ongoing support structure)\n- resources.md (additional help and learning)\n\nSuccess plan should include:\n- Quick wins for first week\n- Feature adoption goals\n- Training completion targets\n- Business outcome alignment\n- escalation path for issues\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "create plans",
+          "schedule meetings",
+          "assign resources"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    }
+  ],
+  "branches": {
+    "provisioning-failed": "provision"
+  }
+}

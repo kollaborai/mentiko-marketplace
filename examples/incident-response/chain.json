@@ -1,0 +1,137 @@
+{
+  "name": "Incident Response Pipeline",
+  "version": "1.0",
+  "description": "Incident handling with detect, triage, resolve, review agents",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 30,
+    "max_rounds": 1,
+    "project_root": "auto",
+    "session_prefix": "incident",
+    "on_complete": "stop",
+    "incident_config": {
+      "incident_id": "{INCIDENT_ID}",
+      "severity": "{SEVERITY}",
+      "service": "{SERVICE}",
+      "region": "{REGION}",
+      "detection_source": "{SOURCE}",
+      "on_call_engineer": "{ON_CALL}"
+    }
+  },
+  "agents": [
+    {
+      "id": "detect",
+      "name": "Detection Analyst",
+      "role": "Analyze alert and confirm incident",
+      "triggers": [
+        "manual-start",
+        "alert-triggered"
+      ],
+      "emits": "incident-confirmed",
+      "context": {
+        "read_first": [
+          "alerts/{incident_id}.json"
+        ],
+        "workspace": "workspace/detect/"
+      },
+      "prompt": "You are a Detection Analyst. Investigate alert for {service}.\n\n1. Read alerts/{incident_id}.json for alert details\n2. Check monitoring dashboards\n3. Review recent logs and metrics\n4. Confirm if this is a real incident\n5. Assess initial scope and impact\n6. Identify affected users/systems\n7. Gather initial context\n\nDeliver to workspace/detect/ with:\n- incident-summary.md (what's happening)\n- scope.md (what's affected)\n- impact-assessment.md (user impact, business impact)\n- initial-evidence.md (logs, metrics, screenshots)\n- detection-timestamp.md (when it started)\n\nEnd with:\nVERDICT: confirmed\nVERDICT: false-alarm\n\nIf confirmed, emit 'incident-confirmed'. If false alarm, emit 'false-alarm'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read alerts",
+          "check dashboards",
+          "review logs"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "triage",
+      "name": "Triage Coordinator",
+      "role": "Assess severity and coordinate response",
+      "triggers": [
+        "incident-confirmed"
+      ],
+      "emits": "triage-complete",
+      "context": {
+        "read_first": [
+          "workspace/detect/incident-summary.md",
+          "workspace/detect/scope.md"
+        ],
+        "workspace": "workspace/triage/"
+      },
+      "prompt": "You are a Triage Coordinator. Triage incident {incident_id}.\n\n1. Read detection findings\n2. Assess severity based on impact:\n   - P1 Critical: Service down, all users affected\n   - P2 High: Major degradation, many users affected\n   - P3 Medium: Partial degradation, some users affected\n   - P4 Low: Minor issue, few users affected\n3. Determine if escalation needed\n4. Notify on-call: {on_call_engineer}\n5. Identify required responders (engineering, security, management)\n6. Estimate resolution time\n7. Create communication plan\n\nDeliver to workspace/triage/ with:\n- triage-report.md (severity and assessment)\n- severity.md (assigned severity with rationale)\n- responders.md (who needs to be involved)\n- communication-plan.md (who to notify and when)\n- estimated-resolution.md (time estimate)\n- war-room-commands.md (commands to set up war room)\n\nEnd with:\nSEVERITY: P1\nSEVERITY: P2\nSEVERITY: P3\nSEVERITY: P4\n\nEmit 'triage-complete' with severity level.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "assess severity",
+          "notify responders",
+          "escalate"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "resolve",
+      "name": "Resolution Engineer",
+      "role": "Implement fix and restore service",
+      "triggers": [
+        "triage-complete"
+      ],
+      "emits": "incident-resolved",
+      "context": {
+        "read_first": [
+          "workspace/triage/triage-report.md",
+          "workspace/detect/incident-summary.md"
+        ],
+        "workspace": "workspace/resolve/"
+      },
+      "prompt": "You are a Resolution Engineer. Resolve incident {incident_id}.\n\n1. Read triage and detection reports\n2. Identify root cause\n3. Propose fix options:\n   - Immediate mitigation (stop the bleeding)\n   - Temporary workaround\n   - Permanent fix\n4. Implement chosen solution\n5. Verify fix is working\n6. Monitor for stability\n7. Document all actions taken\n8. Roll back if fix causes new issues\n\nDeliver to workspace/resolve/ with:\n- root-cause.md (what caused the incident)\n- fix-options.md (considered solutions)\n- actions-taken.md (chronological action log)\n- fix-applied.md (what was fixed)\n- verification.md (how we verified it works)\n- rollback-plan.md (how to undo if needed)\n- resolution-timestamp.md (when it was fixed)\n\nEnd with:\nVERDICT: resolved\nVERDICT: escalated (requires additional help)\nVERDICT: mitigated (temporary fix, permanent fix pending)\n\nIf resolved, emit 'incident-resolved'. If mitigated, emit 'incident-mitigated'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "implement fixes",
+          "restart services",
+          "roll back deployments"
+        ],
+        "needs_approval": [
+          "production changes during incident",
+          "escalating to executives"
+        ]
+      }
+    },
+    {
+      "id": "review",
+      "name": "Post-Incident Reviewer",
+      "role": "Create postmortem and improvement plan",
+      "triggers": [
+        "incident-resolved",
+        "incident-mitigated"
+      ],
+      "emits": "postmortem-complete",
+      "context": {
+        "read_first": [
+          "workspace/detect/",
+          "workspace/triage/",
+          "workspace/resolve/"
+        ],
+        "workspace": "workspace/review/"
+      },
+      "prompt": "You are a Post-Incident Reviewer. Create postmortem for {incident_id}.\n\n1. Read all previous workspace files\n2. Create comprehensive postmortem\n3. Identify timeline of events\n4. Determine root cause (5 whys)\n5. Assess response effectiveness\n6. Identify improvement opportunities\n7. Create action items to prevent recurrence\n8. Calculate MTTR (Mean Time To Resolve)\n9. Document lessons learned\n\nDeliver to workspace/review/ with:\n- postmortem.md (full incident report)\n- timeline.md (detailed event timeline)\n- root-cause-analysis.md (5 whys, causal factors)\n- response-assessment.md (what went well, what didn't)\n- action-items.md (prevention steps with owners)\n- metrics.md (MTTD, MTTR, availability impact)\n- communication-summary.md (notifications sent)\n\nPostmortem must include:\n- Executive summary\n- Impact (users affected, revenue impact)\n- Root cause\n- Timeline (detect → triage → resolve)\n- Follow-up actions with owners\n- Blameless tone (focus on process, not people)\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read all incident data",
+          "write postmortem",
+          "create action items"
+        ],
+        "needs_approval": [
+          "publishing postmortem externally"
+        ]
+      }
+    }
+  ],
+  "branches": {
+    "incident-mitigated": "resolve"
+  }
+}

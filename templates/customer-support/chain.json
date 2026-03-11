@@ -1,0 +1,109 @@
+{
+  "name": "Customer Support Triage",
+  "version": "1.0",
+  "description": "Classify incoming tickets, research solutions, draft responses, escalate if needed",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 4,
+    "project_root": "auto",
+    "session_prefix": "support",
+    "on_complete": "stop"
+  },
+  "agents": [
+    {
+      "id": "classifier",
+      "name": "Ticket Classifier",
+      "role": "Categorize and prioritize incoming support tickets",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "ticket-classified",
+      "context": {
+        "read_first": [],
+        "workspace": "workspace/classify/"
+      },
+      "prompt": "You are a Ticket Classifier. Analyze the support ticket.\n\n1. Identify the issue category (bug, feature request, question, billing, technical)\n2. Assess severity (low, medium, high, urgent)\n3. Identify affected product/features\n4. Check if this is a known issue\n5. Write classification to workspace/classify/result.md\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read tickets",
+          "write to workspace/classify/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "researcher",
+      "name": "Solution Researcher",
+      "role": "Find solutions to the classified issue",
+      "triggers": [
+        "ticket-classified"
+      ],
+      "emits": "solution-found",
+      "context": {
+        "read_first": [
+          "workspace/classify/result.md"
+        ],
+        "workspace": "workspace/research/"
+      },
+      "prompt": "You are a Solution Researcher. Find answers for the support ticket.\n\n1. Read the ticket classification\n2. Search knowledge base and documentation\n3. Check for similar past issues\n4. Find relevant troubleshooting steps\n5. Write solution summary to workspace/research/solution.md\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "search knowledge base",
+          "write to workspace/research/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "writer",
+      "name": "Response Writer",
+      "role": "Draft customer response based on research",
+      "triggers": [
+        "solution-found"
+      ],
+      "emits": "response-ready",
+      "context": {
+        "read_first": [
+          "workspace/classify/result.md",
+          "workspace/research/solution.md"
+        ],
+        "workspace": "workspace/draft/"
+      },
+      "prompt": "You are a Response Writer. Create a helpful customer response.\n\n1. Read the ticket classification and research\n2. Draft a clear, empathetic response\n3. Include step-by-step solutions if applicable\n4. Set expectations for resolution timeline if needed\n5. Write response to workspace/draft/response.md\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read all research",
+          "write to workspace/draft/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "escalation",
+      "name": "Escalation Handler",
+      "role": "Decide if ticket needs escalation",
+      "triggers": [
+        "response-ready"
+      ],
+      "emits": "ticket-complete",
+      "context": {
+        "read_first": [
+          "workspace/classify/result.md",
+          "workspace/research/solution.md",
+          "workspace/draft/response.md"
+        ],
+        "workspace": "workspace/final/"
+      },
+      "prompt": "You are an Escalation Handler. Determine next steps for the ticket.\n\nReview all materials and decide:\n1. Is the response adequate to send to customer?\n2. Does this need engineering escalation?\n3. Does this need management attention?\n4. Can this be auto-resolved?\n\nWrite decision to workspace/final/action.md with:\n- Action taken (send-response, escalate-engineering, escalate-management, needs-human-review)\n- Rationale\n- Any additional notes\n\nEnd with:\nACTION: send-response\nACTION: escalate-engineering\nACTION: escalate-management\nACTION: needs-human-review\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read all files",
+          "write to workspace/final/"
+        ],
+        "needs_approval": []
+      }
+    }
+  ],
+  "branches": {}
+}

@@ -1,0 +1,192 @@
+{
+  "name": "DevOps Deployment Pipeline",
+  "version": "1.0",
+  "description": "Automated deployment with build, test, deploy, verify agents",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 30,
+    "max_rounds": 1,
+    "project_root": "auto",
+    "session_prefix": "deploy",
+    "on_complete": "stop",
+    "parallel": {
+      "enabled": true,
+      "max_concurrent": 3,
+      "execution_mode": "all"
+    },
+    "deployment_config": {
+      "app_name": "{APP_NAME}",
+      "environment": "{ENVIRONMENT}",
+      "region": "{REGION}",
+      "container_registry": "{REGISTRY}",
+      "cluster": "{CLUSTER}",
+      "rollback_on_failure": true
+    }
+  },
+  "agents": [
+    {
+      "id": "build",
+      "name": "Build Agent",
+      "role": "Build and package the application",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "build-complete",
+      "context": {
+        "read_first": [
+          "specs/build-config.md"
+        ],
+        "workspace": "workspace/build/"
+      },
+      "prompt": "You are a Build Agent. Your task is to build {app_name}.\n\n1. Read specs/build-config.md for build instructions\n2. Install dependencies\n3. Run the build process\n4. Run static analysis (linting, type checking)\n5. Create docker image if configured\n6. Tag image with version and commit hash\n7. Push to container registry: {container_registry}\n8. Generate build artifacts\n\nCreate workspace/build/ with:\n- build-report.md (build output, warnings, errors)\n- artifacts/ (build outputs)\n- image-tag.txt (docker image tag)\n- build-info.json (version, commit, timestamp)\n\nEnd with:\nBUILD_STATUS: success\nBUILD_STATUS: failed\n\nIf success, emit 'build-complete'. If failed, emit 'build-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "run build commands",
+          "create docker images",
+          "push to registry"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "test-unit",
+      "name": "Unit Test Agent",
+      "role": "Run unit tests",
+      "triggers": [
+        "build-complete"
+      ],
+      "emits": "unit-tests-complete",
+      "context": {
+        "read_first": [
+          "specs/test-config.md"
+        ],
+        "workspace": "workspace/test/unit/"
+      },
+      "prompt": "You are a Unit Test Agent. Run unit tests for {app_name}.\n\n1. Read specs/test-config.md\n2. Run unit test suite\n3. Generate coverage report\n4. Identify failing tests\n5. Categorize failures (flaky, broken, environment)\n\nCreate workspace/test/unit/ with:\n- test-report.md (summary of results)\n- coverage-report.md (code coverage stats)\n- failures.md (list of failing tests with details)\n\nEnd with:\nTEST_STATUS: passed\nTEST_STATUS: failed\n\nCoverage must be at least {min_coverage}%. If passed, emit 'unit-tests-complete'. If failed, emit 'unit-tests-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "run tests",
+          "generate reports"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "test-integration",
+      "name": "Integration Test Agent",
+      "role": "Run integration tests",
+      "triggers": [
+        "build-complete"
+      ],
+      "emits": "integration-tests-complete",
+      "context": {
+        "read_first": [
+          "specs/test-config.md"
+        ],
+        "workspace": "workspace/test/integration/"
+      },
+      "prompt": "You are an Integration Test Agent. Run integration tests for {app_name}.\n\n1. Read specs/test-config.md\n2. Start required services (databases, queues)\n3. Run integration test suite\n4. Test API endpoints and external integrations\n5. Clean up test data\n\nCreate workspace/test/integration/ with:\n- test-report.md (integration test results)\n- api-test-results.md (endpoint tests)\n- failures.md (integration failures)\n\nEnd with:\nTEST_STATUS: passed\nTEST_STATUS: failed\n\nIf passed, emit 'integration-tests-complete'. If failed, emit 'integration-tests-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "run tests",
+          "manage test services"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "test-security",
+      "name": "Security Scan Agent",
+      "role": "Run security vulnerability scans",
+      "triggers": [
+        "build-complete"
+      ],
+      "emits": "security-scan-complete",
+      "context": {
+        "read_first": [
+          "specs/security-config.md"
+        ],
+        "workspace": "workspace/test/security/"
+      },
+      "prompt": "You are a Security Scan Agent. Scan {app_name} for vulnerabilities.\n\n1. Read specs/security-config.md\n2. Run dependency vulnerability scanner (Snyk, npm audit, etc)\n3. Run SAST scan on source code\n4. Check for secrets in code\n5. Verify secure configurations\n\nCreate workspace/test/security/ with:\n- security-report.md (vulnerability findings)\n- dependencies.md (vulnerable dependencies if any)\n- secrets-scan.md (secret detection results)\n\nEnd with:\nSCAN_STATUS: passed\nSCAN_STATUS: failed\n\nCritical vulnerabilities cause failure. If passed, emit 'security-scan-complete'. If failed, emit 'security-scan-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "run scans",
+          "read source code"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    },
+    {
+      "id": "deploy",
+      "name": "Deploy Agent",
+      "role": "Deploy application to environment",
+      "triggers": [
+        "unit-tests-complete",
+        "integration-tests-complete",
+        "security-scan-complete"
+      ],
+      "emits": "deploy-complete",
+      "context": {
+        "read_first": [
+          "specs/deploy-config.md",
+          "workspace/build/image-tag.txt"
+        ],
+        "workspace": "workspace/deploy/"
+      },
+      "prompt": "You are a Deploy Agent. Deploy {app_name} to {environment}.\n\n1. Read specs/deploy-config.md\n2. Verify all tests passed\n3. Read image tag from build output\n4. Update deployment configuration\n5. Deploy to {cluster} in {region}\n6. Wait for health checks\n7. Record deployment version\n\nCreate workspace/deploy/ with:\n- deploy-report.md (deployment output)\n- deployment-info.json (version, timestamp, url)\n- health-check.md (initial health status)\n\nEnd with:\nDEPLOY_STATUS: success\nDEPLOY_STATUS: failed\n\nIf success, emit 'deploy-complete'. If failed, emit 'deploy-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "deploy to environment",
+          "update configs"
+        ],
+        "needs_approval": [
+          "deploying to production"
+        ]
+      }
+    },
+    {
+      "id": "verify",
+      "name": "Verification Agent",
+      "role": "Verify deployment is healthy",
+      "triggers": [
+        "deploy-complete"
+      ],
+      "emits": "pipeline-complete",
+      "context": {
+        "read_first": [
+          "specs/verify-config.md",
+          "workspace/deploy/deployment-info.json"
+        ],
+        "workspace": "workspace/verify/"
+      },
+      "prompt": "You are a Verification Agent. Verify {app_name} is running correctly in {environment}.\n\n1. Read deployment info\n2. Check service health endpoints\n3. Verify all pods/containers are running\n4. Test critical user flows\n5. Check metrics (error rates, latency)\n6. Verify logging and monitoring\n7. Test rollback capability\n\nCreate workspace/verify/ with:\n- verification-report.md (overall health)\n- health-checks.md (detailed health results)\n- smoke-tests.md (critical flow tests)\n- metrics.md (performance metrics)\n\nEnd with:\nVERDICT: verified\nVERDICT: failed\n\nIf verified and healthy, emit 'pipeline-complete'. If issues found, emit 'verification-failed'.\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "query endpoints",
+          "check logs",
+          "run smoke tests"
+        ],
+        "needs_approval": [
+          "nothing"
+        ]
+      }
+    }
+  ],
+  "branches": {
+    "build-failed": "build",
+    "unit-tests-failed": "test-unit",
+    "integration-tests-failed": "test-integration",
+    "security-scan-failed": "test-security",
+    "deploy-failed": "deploy",
+    "verification-failed": "deploy"
+  }
+}

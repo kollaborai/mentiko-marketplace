@@ -1,0 +1,111 @@
+{
+  "name": "Data Processing Pipeline",
+  "version": "1.0",
+  "description": "Extract data from sources, transform it, validate quality, load to destination",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 4,
+    "project_root": "auto",
+    "session_prefix": "etl",
+    "on_complete": "stop"
+  },
+  "agents": [
+    {
+      "id": "extractor",
+      "name": "Data Extractor",
+      "role": "Extract data from source systems",
+      "triggers": [
+        "manual-start"
+      ],
+      "emits": "extract-complete",
+      "context": {
+        "read_first": [],
+        "workspace": "workspace/extract/"
+      },
+      "prompt": "You are a Data Extractor. Extract data from the specified sources.\n\n1. Connect to source systems (APIs, databases, files)\n2. Fetch data according to specifications\n3. Handle pagination and rate limits\n4. Write raw data to workspace/extract/raw.json\n5. Log extraction stats to workspace/extract/stats.md\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "connect to sources",
+          "write to workspace/extract/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "transformer",
+      "name": "Data Transformer",
+      "role": "Transform and normalize extracted data",
+      "triggers": [
+        "extract-complete"
+      ],
+      "emits": "transform-complete",
+      "context": {
+        "read_first": [
+          "workspace/extract/raw.json",
+          "workspace/extract/stats.md"
+        ],
+        "workspace": "workspace/transform/"
+      },
+      "prompt": "You are a Data Transformer. Process and normalize the extracted data.\n\n1. Read the raw data from extraction\n2. Apply transformations (cleaning, formatting, type conversion)\n3. Handle missing or invalid values\n4. Normalize field names and formats\n5. Write transformed data to workspace/transform/cleaned.json\n6. Log transformation rules to workspace/transform/rules.md\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read extract files",
+          "write to workspace/transform/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "validator",
+      "name": "Data Quality Validator",
+      "role": "Validate data quality and completeness",
+      "triggers": [
+        "transform-complete"
+      ],
+      "emits": "validation-complete",
+      "context": {
+        "read_first": [
+          "workspace/transform/cleaned.json",
+          "workspace/transform/rules.md"
+        ],
+        "workspace": "workspace/validate/"
+      },
+      "prompt": "You are a Data Quality Validator. Check the transformed data.\n\n1. Validate data types and formats\n2. Check for missing required fields\n3. Run business rule validations\n4. Check for duplicates\n5. Calculate quality metrics\n6. Write validation report to workspace/validate/report.md\n\nEnd with:\nRESULT: passed\nRESULT: failed\nRESULT: passed-with-warnings\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read transform files",
+          "write to workspace/validate/"
+        ],
+        "needs_approval": []
+      }
+    },
+    {
+      "id": "loader",
+      "name": "Data Loader",
+      "role": "Load validated data to destination",
+      "triggers": [
+        "validation-complete"
+      ],
+      "emits": "load-complete",
+      "context": {
+        "read_first": [
+          "workspace/transform/cleaned.json",
+          "workspace/validate/report.md"
+        ],
+        "workspace": "workspace/load/"
+      },
+      "prompt": "You are a Data Loader. Load data to the destination system.\n\n1. Read the validation report\n2. If validation failed, stop and report errors\n3. Connect to destination (database, warehouse, API)\n4. Load data in batches\n5. Handle conflicts and errors\n6. Write load summary to workspace/load/summary.md\n\nWhen done, write your event file and output AGENT_COMPLETE.",
+      "authorities": {
+        "can": [
+          "read validate files",
+          "write to workspace/load/"
+        ],
+        "needs_approval": []
+      }
+    }
+  ],
+  "branches": {
+    "failed": "transformer"
+  }
+}

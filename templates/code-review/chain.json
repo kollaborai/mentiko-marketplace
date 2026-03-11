@@ -1,0 +1,35 @@
+{
+  "name": "Code Review Pipeline",
+  "version": "1.2",
+  "description": "Analyze PR changes, security scan, test coverage check, approve or request changes",
+  "config": {
+    "monitor": true,
+    "monitor_interval": 60,
+    "max_rounds": 3,
+    "project_root": "auto",
+    "session_prefix": "cr",
+    "on_complete": "stop"
+  },
+  "agents": [
+    {
+      "$ref": "code-reviewer",
+      "triggers": ["manual-start"]
+    },
+    {
+      "$ref": "security-scanner",
+      "triggers": ["code-reviewer.complete"]
+    },
+    {
+      "$ref": "pr-approver",
+      "triggers": ["security-scanner.complete"],
+      "emits": "review-complete",
+      "artifacts": {
+        "consumes": [
+          { "from": "code-reviewer", "artifact": "report", "required": true },
+          { "from": "security-scanner", "artifact": "report", "required": true }
+        ]
+      }
+    }
+  ],
+  "branches": {}
+}
