@@ -1,0 +1,12 @@
+{
+  "id": "blog-pipeline-bundle",
+  "name": "Blog Pipeline Package",
+  "description": "Content publishing workflow for blog posts. Research, draft, review, and publish pipeline with SEO optimization.",
+  "version": "1.0",
+  "category": "content",
+  "tags": ["blog", "content", "seo", "publishing"],
+  "chains": ["blog-pipeline"],
+  "agents": [],
+  "artifacts": ["research-summary"],
+  "author": "mentiko"
+}

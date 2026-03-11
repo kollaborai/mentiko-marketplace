@@ -1,0 +1,12 @@
+{
+  "id": "ai-setup-agent-bundle",
+  "name": "AI Setup Agent Package",
+  "description": "Quick setup workflow for AI development environments. Configures tools, dependencies, and project structure for AI/ML projects.",
+  "version": "1.0",
+  "category": "automation",
+  "tags": ["setup", "automation", "ai", "development"],
+  "chains": ["ai-setup-agent"],
+  "agents": [],
+  "artifacts": [],
+  "author": "mentiko"
+}

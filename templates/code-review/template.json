@@ -1,0 +1,12 @@
+{
+  "id": "code-review-bundle",
+  "name": "Code Review Package",
+  "description": "Complete code review workflow with agents and output templates. Analyzes PR changes, performs security scans, checks test coverage, and approves or requests changes.",
+  "version": "1.2",
+  "category": "development",
+  "tags": ["code-review", "quality", "security", "testing"],
+  "chains": ["code-review"],
+  "agents": ["code-reviewer", "security-scanner", "pr-approver"],
+  "artifacts": ["technical-analysis", "security-audit"],
+  "author": "mentiko"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "research-write-review-bundle",
+  "name": "Research Write Review Package",
+  "description": "End-to-end content creation workflow. Research phase gathers information, writing phase creates content, review phase ensures quality and accuracy.",
+  "version": "1.0",
+  "category": "content",
+  "tags": ["research", "writing", "review", "content"],
+  "chains": ["research-write-review"],
+  "agents": ["researcher", "technical-writer", "content-reviewer"],
+  "artifacts": ["research-summary"],
+  "author": "mentiko"
+}

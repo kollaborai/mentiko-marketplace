@@ -1,0 +1,12 @@
+{
+  "id": "customer-support-bundle",
+  "name": "Customer Support Package",
+  "description": "Customer service workflow for triaging, researching, and responding to inquiries. Includes templates for incident reports and resolution tracking.",
+  "version": "1.0",
+  "category": "business",
+  "tags": ["support", "customer-service", "triage"],
+  "chains": ["customer-support"],
+  "agents": [],
+  "artifacts": ["incident-report"],
+  "author": "mentiko"
+}

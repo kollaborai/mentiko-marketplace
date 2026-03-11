@@ -1,0 +1,12 @@
+{
+  "id": "data-pipeline-bundle",
+  "name": "Data Pipeline Package",
+  "description": "Automated data processing workflow. Extract phase pulls data from sources, transform phase processes and cleanses, load phase delivers to destination systems.",
+  "version": "1.0",
+  "category": "data",
+  "tags": ["data", "etl", "pipeline", "automation"],
+  "chains": ["data-pipeline"],
+  "agents": [],
+  "artifacts": ["data-schema", "metrics-report"],
+  "author": "mentiko"
+}
