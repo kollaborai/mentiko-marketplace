@@ -1,0 +1,34 @@
+{
+  "id": "custom-webhook",
+  "name": "Outbound Webhook",
+  "description": "Send chain events as HTTP POST to any endpoint",
+  "version": "1.1.0",
+  "author": "mentiko",
+  "category": "outbound-webhook",
+  "builtin": true,
+  "events": ["chain-completed", "chain-stopped", "agent-completed"],
+  "configSchema": [
+    {
+      "key": "url",
+      "label": "Webhook URL",
+      "type": "string",
+      "required": true,
+      "description": "HTTP endpoint to send events to"
+    },
+    {
+      "key": "secret",
+      "label": "HMAC Secret (optional)",
+      "type": "secret",
+      "required": false,
+      "description": "Secret for webhook signature verification"
+    },
+    {
+      "key": "events",
+      "label": "Events to send",
+      "type": "select",
+      "options": ["all", "chain-completed", "chain-stopped"],
+      "default": "all",
+      "description": "Which events to send"
+    }
+  ]
+}

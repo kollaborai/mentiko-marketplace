@@ -1,0 +1,35 @@
+{
+  "id": "notify-slack",
+  "name": "Slack Notifications",
+  "description": "Send Slack messages when chains complete, stop, or agents finish",
+  "version": "1.0.0",
+  "author": "mentiko",
+  "category": "notification",
+  "builtin": true,
+  "events": ["chain-completed", "chain-stopped", "agent-completed"],
+  "onEventScript": "on-event.sh",
+  "configSchema": [
+    {
+      "key": "webhook_url",
+      "label": "Slack Webhook URL",
+      "type": "secret",
+      "required": true,
+      "description": "Incoming webhook URL from your Slack app settings"
+    },
+    {
+      "key": "channel",
+      "label": "Channel (optional)",
+      "type": "string",
+      "required": false,
+      "description": "Override channel, e.g. #deployments"
+    },
+    {
+      "key": "notify_on",
+      "label": "Notify on",
+      "type": "select",
+      "options": ["all", "chain-completed", "chain-stopped"],
+      "default": "chain-completed",
+      "description": "Which events to send notifications for"
+    }
+  ]
+}

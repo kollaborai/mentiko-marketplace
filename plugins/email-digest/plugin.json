@@ -1,0 +1,35 @@
+{
+  "id": "email-digest",
+  "name": "Email Digest",
+  "description": "Sends a daily summary email of all chain runs (completed, stopped, pending approvals). Useful for team visibility without per-run noise.",
+  "version": "1.0.0",
+  "author": "mentiko",
+  "category": "notification",
+  "builtin": true,
+  "events": ["chain-completed", "chain-stopped"],
+  "onEventScript": "on-event.sh",
+  "configSchema": [
+    {
+      "key": "to",
+      "label": "Recipient email",
+      "type": "string",
+      "required": true,
+      "description": "Email address(es), comma-separated"
+    },
+    {
+      "key": "digest_file",
+      "label": "Digest buffer file path",
+      "type": "string",
+      "required": false,
+      "description": "Local file used to buffer events before sending digest (default: /tmp/mentiko-digest.jsonl)"
+    },
+    {
+      "key": "send_after_events",
+      "label": "Send after N events",
+      "type": "string",
+      "required": false,
+      "default": "10",
+      "description": "Flush digest after accumulating N events (0 = only on schedule)"
+    }
+  ]
+}

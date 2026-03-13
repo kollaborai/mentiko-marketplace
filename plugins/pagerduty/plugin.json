@@ -1,0 +1,27 @@
+{
+  "id": "pagerduty",
+  "name": "PagerDuty Alerts",
+  "description": "Create incidents when chains fail",
+  "version": "1.0.0",
+  "author": "mentiko",
+  "category": "notification",
+  "builtin": true,
+  "events": ["chain-stopped"],
+  "configSchema": [
+    {
+      "key": "routing_key",
+      "label": "Integration Routing Key",
+      "type": "secret",
+      "required": true,
+      "description": "Events API v2 integration key from PagerDuty"
+    },
+    {
+      "key": "severity",
+      "label": "Severity",
+      "type": "select",
+      "options": ["critical", "error", "warning", "info"],
+      "default": "error",
+      "description": "Incident severity level"
+    }
+  ]
+}

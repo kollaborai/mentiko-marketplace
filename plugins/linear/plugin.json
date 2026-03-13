@@ -1,0 +1,26 @@
+{
+  "id": "linear",
+  "name": "Linear Sync",
+  "description": "Sync task status with Linear issues",
+  "version": "1.0.0",
+  "author": "mentiko",
+  "category": "task-provider",
+  "builtin": true,
+  "events": ["chain-completed", "agent-completed"],
+  "configSchema": [
+    {
+      "key": "api_key",
+      "label": "Linear API Key",
+      "type": "secret",
+      "required": true,
+      "description": "Personal API key from Linear settings"
+    },
+    {
+      "key": "team_id",
+      "label": "Team ID",
+      "type": "string",
+      "required": false,
+      "description": "Default team ID for creating issues"
+    }
+  ]
+}

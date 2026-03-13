@@ -1,0 +1,49 @@
+{
+  "id": "github-pr",
+  "name": "GitHub PR Creator",
+  "description": "Automatically creates a GitHub Pull Request when a chain completes. Uses the current branch and configurable base branch.",
+  "version": "1.0.0",
+  "author": "mentiko",
+  "category": "ci-cd",
+  "builtin": true,
+  "events": ["chain-completed"],
+  "onEventScript": "on-event.sh",
+  "configSchema": [
+    {
+      "key": "token",
+      "label": "GitHub Token",
+      "type": "secret",
+      "required": true,
+      "description": "Personal access token with repo scope"
+    },
+    {
+      "key": "owner",
+      "label": "Repository owner",
+      "type": "string",
+      "required": true,
+      "description": "GitHub org or username"
+    },
+    {
+      "key": "repo",
+      "label": "Repository name",
+      "type": "string",
+      "required": true,
+      "description": "GitHub repo name"
+    },
+    {
+      "key": "base_branch",
+      "label": "Base branch",
+      "type": "string",
+      "required": false,
+      "default": "main",
+      "description": "Branch to merge into (default: main)"
+    },
+    {
+      "key": "draft",
+      "label": "Create as draft PR",
+      "type": "boolean",
+      "required": false,
+      "default": false
+    }
+  ]
+}

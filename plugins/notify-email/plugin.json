@@ -1,0 +1,28 @@
+{
+  "id": "notify-email",
+  "name": "Email Notifications",
+  "description": "Send email alerts when chains complete or fail",
+  "version": "1.0.0",
+  "author": "mentiko",
+  "category": "notification",
+  "builtin": true,
+  "events": ["chain-completed", "chain-stopped"],
+  "onEventScript": "on-event.sh",
+  "configSchema": [
+    {
+      "key": "to",
+      "label": "Recipient email",
+      "type": "string",
+      "required": true,
+      "description": "Email address to send notifications to"
+    },
+    {
+      "key": "notify_on",
+      "label": "Notify on",
+      "type": "select",
+      "options": ["all", "chain-completed", "chain-stopped"],
+      "default": "all",
+      "description": "Which events trigger an email"
+    }
+  ]
+}
